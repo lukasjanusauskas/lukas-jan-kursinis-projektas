@@ -1,0 +1,6 @@
+venv/
+.python-version
+*.csv
+*.zip
+__pycache__/
+.vscode/
