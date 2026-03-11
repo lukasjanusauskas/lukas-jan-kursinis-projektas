@@ -17,6 +17,24 @@ python -m venv venv
 pip install  -r requirements.txt
 ```
 
+1. Surinkti duomenis
+
+Kad negautumėte klaidų paleiskite šį powershell skriptą:
+
+```powershell
+mkdir data
+cd data
+mkdir yipeng
+mkdir rostock
+```
+
+Šis skriptas paruoš direktorijos struktūrą, kurios reikalauja skriptas `duomenu_surinkimas.py`.
+Jį, aktyvavę virtualią aplinką, paleiskite taip:
+
+```
+python -m src.duomenu_surinkimas
+```
+
 - Leidžiant Unix operacinėse sistemose (MacOS, Linux):
 
 > Jie naudojate Ubuntu jums gali tekti leisti ne `python`, bet `python3`
@@ -25,4 +43,21 @@ pip install  -r requirements.txt
 python -m venv vevn
 source venv/bin/activate
 pip install -r requirements.txt
+```
+
+1. Surinkti duomenis
+
+Kad negautumėte klaidų paleiskite šį bash skriptą:
+
+```bash
+mkdir data
+mkdir data/yipeng
+mkdir data/rostock
+```
+
+Šis skriptas paruoš direktorijos struktūrą, kurios reikalauja skriptas `duomenu_surinkimas.py`.
+Jį, aktyvavę virtualią aplinką, paleiskite taip:
+
+```
+python -m src.duomenu_surinkimas
 ```
