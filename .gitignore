@@ -4,3 +4,9 @@ venv/
 *.zip
 __pycache__/
 .vscode/
+.venv/
+*.npy
+*.sif
+*.h5
+*.pkl
+output/

@@ -1,0 +1,126 @@
+(213883, 475) (213883, 475)
+(213883, 475)
+(213883, 25, 2) (55904, 25, 2)
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  10 out of  16 | elapsed:  4.4min remaining:  2.6min
+[Parallel(n_jobs=-1)]: Done  16 out of  16 | elapsed:  7.2min finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  10 out of  16 | elapsed:    0.2s remaining:    0.1s
+[Parallel(n_jobs=-1)]: Done  16 out of  16 | elapsed:    0.3s finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  10 out of  16 | elapsed:    0.1s remaining:    0.0s
+[Parallel(n_jobs=-1)]: Done  16 out of  16 | elapsed:    0.1s finished
+==========
+(16, None)
+{'picp': np.float64(0.8963043789353177), 'pinaw': np.float64(0.0004577588103517349)}
+==========
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  10 out of  16 | elapsed:  1.9min remaining:  1.2min
+[Parallel(n_jobs=-1)]: Done  16 out of  16 | elapsed:  3.2min finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  10 out of  16 | elapsed:    0.0s remaining:    0.0s
+[Parallel(n_jobs=-1)]: Done  16 out of  16 | elapsed:    0.1s finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  10 out of  16 | elapsed:    0.0s remaining:    0.0s
+[Parallel(n_jobs=-1)]: Done  16 out of  16 | elapsed:    0.0s finished
+==========
+(16, 16)
+{'picp': np.float64(0.9115090154550658), 'pinaw': np.float64(0.0004969770115794433)}
+==========
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  10 out of  16 | elapsed:  4.3min remaining:  2.6min
+[Parallel(n_jobs=-1)]: Done  16 out of  16 | elapsed:  7.1min finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  10 out of  16 | elapsed:    0.2s remaining:    0.1s
+[Parallel(n_jobs=-1)]: Done  16 out of  16 | elapsed:    0.3s finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  10 out of  16 | elapsed:    0.1s remaining:    0.0s
+[Parallel(n_jobs=-1)]: Done  16 out of  16 | elapsed:    0.1s finished
+==========
+(16, 64)
+{'picp': np.float64(0.8968231253577561), 'pinaw': np.float64(0.00045347723061776103)}
+==========
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed: 13.1min
+[Parallel(n_jobs=-1)]: Done  64 out of  64 | elapsed: 25.1min finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed:    0.6s
+[Parallel(n_jobs=-1)]: Done  64 out of  64 | elapsed:    1.2s finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed:    0.2s
+[Parallel(n_jobs=-1)]: Done  64 out of  64 | elapsed:    0.3s finished
+==========
+(64, None)
+{'picp': np.float64(0.952633085289067), 'pinaw': np.float64(0.0005463257647264309)}
+==========
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed:  6.0min
+[Parallel(n_jobs=-1)]: Done  64 out of  64 | elapsed: 11.5min finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed:    0.1s
+[Parallel(n_jobs=-1)]: Done  64 out of  64 | elapsed:    0.2s finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=-1)]: Done  64 out of  64 | elapsed:    0.1s finished
+==========
+(64, 16)
+{'picp': np.float64(0.9417930738408701), 'pinaw': np.float64(0.0005461079534425483)}
+==========
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed: 13.3min
+[Parallel(n_jobs=-1)]: Done  64 out of  64 | elapsed: 25.3min finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed:    0.6s
+[Parallel(n_jobs=-1)]: Done  64 out of  64 | elapsed:    1.3s finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed:    0.1s
+[Parallel(n_jobs=-1)]: Done  64 out of  64 | elapsed:    0.3s finished
+==========
+(64, 64)
+{'picp': np.float64(0.9509337435603893), 'pinaw': np.float64(0.0005449899316611185)}
+==========
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed: 13.3min
+[Parallel(n_jobs=-1)]: Done 128 out of 128 | elapsed: 49.2min finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed:    0.6s
+[Parallel(n_jobs=-1)]: Done 128 out of 128 | elapsed:    2.8s finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed:    0.2s
+[Parallel(n_jobs=-1)]: Done 128 out of 128 | elapsed:    0.7s finished
+==========
+(128, None)
+{'picp': np.float64(0.9591442472810532), 'pinaw': np.float64(0.0005679207943426508)}
+==========
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed:  6.0min
+[Parallel(n_jobs=-1)]: Done 128 out of 128 | elapsed: 22.2min finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed:    0.1s
+[Parallel(n_jobs=-1)]: Done 128 out of 128 | elapsed:    0.4s finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=-1)]: Done 128 out of 128 | elapsed:    0.1s finished
+==========
+(128, 16)
+{'picp': np.float64(0.9539567830566685), 'pinaw': np.float64(0.0005895676617049576)}
+==========
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed: 13.1min
+[Parallel(n_jobs=-1)]: Done 128 out of 128 | elapsed: 48.6min finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed:    0.6s
+[Parallel(n_jobs=-1)]: Done 128 out of 128 | elapsed:    2.6s finished
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed:    0.1s
+[Parallel(n_jobs=-1)]: Done 128 out of 128 | elapsed:    0.7s finished
+==========
+(128, 64)
+{'picp': np.float64(0.9581067544361763), 'pinaw': np.float64(0.0005720992551654839)}
+==========
+[Parallel(n_jobs=-1)]: Using backend ThreadingBackend with 12 concurrent workers.
+[Parallel(n_jobs=-1)]: Done  26 tasks      | elapsed:    0.0s
+[Parallel(n_jobs=-1)]: Done 128 out of 128 | elapsed:    0.0s finished
+(1364, 25, 2) (2728,) (1364,) (1364,)
+[-0.0012     -0.0026     -0.00066944 ... -0.00115778 -0.00137
+ -0.00210493]

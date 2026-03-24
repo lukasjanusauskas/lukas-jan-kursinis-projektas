@@ -1,0 +1,10 @@
+Bootstrap: docker
+From: docker.io/python:3.12-bookworm
+
+%files
+    src /
+    *_COGoutput.npy /
+    requirements-qrf.txt /requirements-qrf.txt
+
+%post
+    pip install -r requirements-qrf.txt
