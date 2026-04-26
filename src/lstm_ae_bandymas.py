@@ -11,6 +11,7 @@ BATCH_SIZE = 128
 anom_x = np.load('anom-x.npy')
 anom_y = np.load('anom-y.npy')
 
+print(anom_x.shape)
 print(anom_y.shape)
 
 X_train = np.load(f'X_train_COGandDifoutput.npy')

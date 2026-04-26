@@ -11,6 +11,7 @@ import numpy as np
 
 from datetime import datetime, timedelta
 import os
+import traceback
 
 from dotenv import load_dotenv
 
@@ -42,8 +43,8 @@ ORGANIZATIONS = {
     'currentDirection': 'meto',
     'currentSpeed': 'meto',
     'gust': 'noaa',
-    'swellDirection': 'dwd',
-    'swellHeight': 'dwd',
+    'swellDirection': 'meteo',
+    'swellHeight': 'meteo',
     'waveDirection': 'fmi',
     'waveHeight': 'fmi',
     'windDirection': 'noaa',
@@ -85,6 +86,8 @@ def get_stormglass_req(
         )
 
     except:
+        traceback.print_exc()
+        print(response.content)
         return None
 
     # Handle the case when it breaks

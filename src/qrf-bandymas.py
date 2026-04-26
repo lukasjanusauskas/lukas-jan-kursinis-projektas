@@ -51,8 +51,8 @@ def evaluate_metrics(
     }
 
 params = {
-    'n_estimators': [16, 64, 128],
-    'max_depth': [None, 16, 64],
+    'n_estimators': [16, 64, 128, 256],
+    'max_depth': [None, 8, 16, 64],
 }
 
 param_sets = list( product(*params.values()) )
@@ -90,23 +90,26 @@ for param_set in param_sets:
     print( metrics )
     print( '='*10 )
 
+with open('qrf-hyper-search.pkl', 'wb+') as f:
+    pickle.dump(grid_search_results, f)
 
-x = np.load('anom-x.npy')
-x = x.reshape( (-1, x.shape[1]*x.shape[2]) )
-y = np.load('anom-y.npy')
 
-y_pred = qrf_model.predict(x, quantiles=[0.025, 0.975])
-y_pred_low = y_pred[:, 0]
-y_pred_high = y_pred[:, 1]
+# x = np.load('anom-x.npy')
+# x = x.reshape( (-1, x.shape[1]*x.shape[2]) )
+# y = np.load('anom-y.npy')
 
-print(y.shape, y[:, 0].ravel().shape, y_pred_low.shape, y_pred_high.shape)
+# y_pred = qrf_model.predict(x, quantiles=[0.025, 0.975])
+# y_pred_low = y_pred[:, 0]
+# y_pred_high = y_pred[:, 1]
 
-plt.plot(y[:, 0].ravel(), label='true')
-plt.plot(y_pred_low, label='low')
-plt.plot(y_pred_high, label='high')
-plt.legend()
+# print(y.shape, y[:, 0].ravel().shape, y_pred_low.shape, y_pred_high.shape)
 
-plt.tight_layout()
-plt.savefig('qrf-res-yipeng3.png', dpi=750)
+# plt.plot(y[:, 0].ravel(), label='true')
+# plt.plot(y_pred_low, label='low')
+# plt.plot(y_pred_high, label='high')
+# plt.legend()
 
-print(y_pred_low)
+# plt.tight_layout()
+# plt.savefig('qrf-res-yipeng3.png', dpi=750)
+
+# print(y_pred_low)
