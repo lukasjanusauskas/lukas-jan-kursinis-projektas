@@ -3,7 +3,6 @@
 import numpy as np
 from src.lstm_ae_funkcijos import lstm_ae, lstm_ae_hp
 import matplotlib.pyplot as plt
-import keras_tuner
 import tensorflow as tf
 
 BATCH_SIZE = 128
@@ -20,6 +19,7 @@ X_val = np.load(f'X_val_COGandDifoutput.npy')
 y_val = np.load(f'y_val_COGandDifoutput.npy')
 X_test = np.load(f'X_test_COGandDifoutput.npy')
 y_test = np.load(f'y_test_COGandDifoutput.npy')
+
 
 # https://www.tensorflow.org/tutorials/load_data/numpy:
 train_dataset = tf.data\
@@ -55,7 +55,7 @@ model_low = lstm_ae(
     drop_frac=0.25
 )
 
-model_low.fit(train_dataset, validation_data=val_dataset, epochs=100)
+model_low.fit(train_dataset, validation_data=val_dataset, epochs=1)
 print('Low model fit')
 
 model_high = lstm_ae(
@@ -67,7 +67,7 @@ model_high = lstm_ae(
     drop_frac=0.1
 )
 
-model_high.fit(train_dataset, validation_data=val_dataset, epochs=100)
+model_high.fit(train_dataset, validation_data=val_dataset, epochs=1)
 print('High model fit')
 
 y_pred_low = model_low.predict(anom_x)

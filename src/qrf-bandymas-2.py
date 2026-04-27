@@ -67,7 +67,7 @@ for time_step in range(0, 25, 5):
         y_train_cog, y_val_cog, y_train_dif, y_val_dif = prepare_output_data(time_step)
 
         qrf_model = qrf.RandomForestQuantileRegressor(
-            n_estimators=12,
+            n_estimators=16,
             max_depth=8,
             n_jobs=-1,
             verbose=True
