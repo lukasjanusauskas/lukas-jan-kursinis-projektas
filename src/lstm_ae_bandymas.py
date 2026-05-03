@@ -2,8 +2,12 @@
 
 import numpy as np
 from src.lstm_ae_funkcijos import lstm_ae, lstm_ae_hp
-import matplotlib.pyplot as plt
 import tensorflow as tf
+import pickle
+
+# DO NOT IMPORT THIS IN HPC
+import matplotlib.pyplot as plt
+
 
 BATCH_SIZE = 128
 
@@ -17,9 +21,6 @@ X_train = np.load(f'X_train_COGandDifoutput.npy')
 y_train = np.load(f'y_train_COGandDifoutput.npy')
 X_val = np.load(f'X_val_COGandDifoutput.npy')
 y_val = np.load(f'y_val_COGandDifoutput.npy')
-X_test = np.load(f'X_test_COGandDifoutput.npy')
-y_test = np.load(f'y_test_COGandDifoutput.npy')
-
 
 # https://www.tensorflow.org/tutorials/load_data/numpy:
 train_dataset = tf.data\
@@ -38,16 +39,8 @@ val_dataset = tf.data\
     .batch(BATCH_SIZE)\
     .shuffle(buffer_size=10_000)
 
-test_dataset = tf.data\
-    .Dataset\
-    .from_tensor_slices(
-        (X_test, y_test)
-    )\
-    .batch(BATCH_SIZE)\
-    .shuffle(buffer_size=10_000)
-
 model_low = lstm_ae(
-    tau=0.025,
+    tau=0.005,
     lstm_dim=20,
     latent_dim=16,
     n_out_features=2,
@@ -55,11 +48,11 @@ model_low = lstm_ae(
     drop_frac=0.25
 )
 
-model_low.fit(train_dataset, validation_data=val_dataset, epochs=1)
+history_low = model_low.fit(train_dataset, validation_data=val_dataset, epochs=1)
 print('Low model fit')
 
 model_high = lstm_ae(
-    tau=0.975,
+    tau=0.995,
     lstm_dim=8,
     latent_dim=20,
     n_out_features=2,
@@ -67,26 +60,29 @@ model_high = lstm_ae(
     drop_frac=0.1
 )
 
-model_high.fit(train_dataset, validation_data=val_dataset, epochs=1)
+history_high = model_high.fit(train_dataset, validation_data=val_dataset, epochs=1)
 print('High model fit')
 
-y_pred_low = model_low.predict(anom_x)
-y_pred_high = model_high.predict(anom_x)
 
-np.save('y_low_anom.npy', y_pred_low )
-np.save('y_high_anom.npy', y_pred_high )
+with open('output/history_low.pkl', 'w+') as f:
+    pickle.dump( history_low, f )
 
-plt.plot(anom_y[:, 0].ravel(), label='true')
-plt.plot(y_pred_low[:, 0].ravel(), label='low')
-plt.plot(y_pred_high[:, 0].ravel(), label='high')
-plt.savefig('lstm-ae-yipeng3-cog.png')
-plt.show()
+with open('output/history_high.pkl', 'w+') as f:
+    pickle.dump( history_high, f )
 
-plt.plot(anom_y[:, 1].ravel(), label='true')
-plt.plot(y_pred_low[:, 1].ravel(), label='low')
-plt.plot(y_pred_high[:, 1].ravel(), label='high')
-plt.savefig('lstm-ae-yipeng3-dif.png')
-plt.show()
+del X_train, y_train, train_dataset
+del X_val, y_val, val_dataset
+
+X_test = np.load(f'X_test_COGandDifoutput.npy')
+y_test = np.load(f'y_test_COGandDifoutput.npy')
+
+test_dataset = tf.data\
+    .Dataset\
+    .from_tensor_slices(
+        (X_test, y_test)
+    )\
+    .batch(BATCH_SIZE)
+
 
 y_true = []
 y_pred_high = []
@@ -104,6 +100,10 @@ y_true = np.concatenate( y_true )
 y_pred_high = np.concatenate( y_pred_high )
 y_pred_low = np.concatenate( y_pred_low )
 
+y_true.dump('test-set-y_true.npy')
+y_pred_low.dump('test-set-y_pred_low.npy')
+y_pred_high.dump('test-set-y_pred_high.npy')
+
 print(
     'PICP:',
     np.mean( (y_pred_high >= y_true) & (y_pred_low <= y_true) )
@@ -113,4 +113,18 @@ print(
     np.mean( np.abs(y_pred_high - y_pred_low) )
 )
 
+print(
+    'PICP:',
+    np.mean( (y_pred_high >= y_true) & (y_pred_low <= y_true), axis=0)
+)
+print(
+    'PINAW:',
+    np.mean( np.abs(y_pred_high - y_pred_low), axis=0)
+)
 
+
+y_pred_low = model_low.predict(anom_x)
+y_pred_high = model_high.predict(anom_x)
+
+y_pred_low.dump('anom-y_pred_low.npy')
+y_pred_high.dump('anom-y_pred_high.npy')

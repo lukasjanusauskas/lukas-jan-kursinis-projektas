@@ -122,8 +122,8 @@ def prepare_time_series(
     y_arr = np.empty( (df.shape[0], n_future_lag, len(outputs)) )
 
     for ix, col in enumerate( df.columns ):
-        for lag in range( n_lags ):
-            X_arr[:, lag, ix] = df[col].shift(-1 * lag)
+        for lag in range( 1, n_lags+1 ):
+            X_arr[:, lag-1, ix] = df[col].shift(-1 * lag)
 
     for ix, col in enumerate( outputs ):
         for lag in range( 1, n_lags+1 ):
@@ -205,7 +205,7 @@ if __name__ == "__main__":
 
         # interpolate
         group_df = group_df\
-            .resample('15s')\
+            .resample('60s')\
             .median()
 
         if group_df.dropna().shape[0] < 60:
@@ -278,6 +278,9 @@ if __name__ == "__main__":
     print( train_days, val_days, test_days )
     train_counts, val_counts, test_counts = 0, 0, 0
 
+    all_mmsis = []
+    all_days = []
+
     for (mmsi, day), mmsi_df in df.groupby(['MMSI', 'day']):
 
         mmsi_df.dropna(inplace=True)
@@ -326,6 +329,14 @@ if __name__ == "__main__":
             else:
                 X_test = np.concatenate([X_test, X_arr], axis=0)
                 y_test = np.concatenate([y_test, y_arr], axis=0)
+
+            all_mmsis.extend( [mmsi]*X_arr.shape[0] )
+            all_days.extend( [day]*X_arr.shape[0] )
+
+    np.array(all_mmsis).dump('all-mmsis-test.npy')
+    np.array(all_days).dump('all-days-test.npy')
+
+    print(len(all_days))
 
     name_appendix = 'COGandDifoutput'
 
