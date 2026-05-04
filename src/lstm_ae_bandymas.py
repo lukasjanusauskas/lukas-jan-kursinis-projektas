@@ -48,7 +48,7 @@ model_low = lstm_ae(
     drop_frac=0.25
 )
 
-history_low = model_low.fit(train_dataset, validation_data=val_dataset, epochs=1)
+history_low = model_low.fit(train_dataset, validation_data=val_dataset, epochs=100)
 print('Low model fit')
 
 model_high = lstm_ae(
@@ -60,14 +60,14 @@ model_high = lstm_ae(
     drop_frac=0.1
 )
 
-history_high = model_high.fit(train_dataset, validation_data=val_dataset, epochs=1)
+history_high = model_high.fit(train_dataset, validation_data=val_dataset, epochs=100)
 print('High model fit')
 
 
-with open('output/history_low.pkl', 'w+') as f:
+with open('output/history_low.pkl', 'wb+') as f:
     pickle.dump( history_low, f )
 
-with open('output/history_high.pkl', 'w+') as f:
+with open('output/history_high.pkl', 'wb+') as f:
     pickle.dump( history_high, f )
 
 del X_train, y_train, train_dataset
@@ -128,3 +128,4 @@ y_pred_high = model_high.predict(anom_x)
 
 y_pred_low.dump('anom-y_pred_low.npy')
 y_pred_high.dump('anom-y_pred_high.npy')
+
