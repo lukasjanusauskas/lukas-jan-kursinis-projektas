@@ -53,8 +53,8 @@ def lstm_ae_hp(
     *args, **kwargs
 ):
 
-    latent_dim = hp.Choice("latent_dim", [5, 20, 50])
-    lstm_dim = hp.Choice("lstm_dim", [10, 50, 150])
+    latent_dim = hp.Choice("latent_dim", [5, 10, 25])
+    lstm_dim = hp.Choice("lstm_dim", [10, 20, 50])
     drop_frac = hp.Choice("drop_frac", [0.05, 0.1, 0.25])
 
     model = tf.keras.Sequential([

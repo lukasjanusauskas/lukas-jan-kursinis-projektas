@@ -1,12 +1,16 @@
 """ LSTM AE bandymas """
 
 import numpy as np
-from src.lstm_ae_funkcijos import lstm_ae, lstm_ae_hp
+from src.lstm_ae_funkcijos import (
+    # lstm_ae,
+    lstm_ae_hp
+)
+from keras_tuner import RandomSearch
 import tensorflow as tf
-import pickle
+# import pickle
 
 # DO NOT IMPORT THIS IN HPC
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 
 BATCH_SIZE = 128
@@ -17,10 +21,13 @@ anom_y = np.load('anom-y.npy')
 print(anom_x.shape)
 print(anom_y.shape)
 
-X_train = np.load(f'X_train_COGandDifoutput.npy')
-y_train = np.load(f'y_train_COGandDifoutput.npy')
-X_val = np.load(f'X_val_COGandDifoutput.npy')
-y_val = np.load(f'y_val_COGandDifoutput.npy')
+X_train = np.load('X_train_final.npy')
+y_train = np.load('y_train_final.npy')
+X_val = np.load('X_val_final.npy')
+y_val = np.load('y_val_final.npy')
+
+print( X_train.shape )
+print( X_val.shape )
 
 # https://www.tensorflow.org/tutorials/load_data/numpy:
 train_dataset = tf.data\
@@ -39,42 +46,65 @@ val_dataset = tf.data\
     .batch(BATCH_SIZE)\
     .shuffle(buffer_size=10_000)
 
-model_low = lstm_ae(
-    tau=0.005,
-    lstm_dim=20,
-    latent_dim=16,
-    n_out_features=2,
-    n_out_timesteps=25,
-    drop_frac=0.25
+rs_low = RandomSearch(
+    hypermodel = lambda hp: lstm_ae_hp(
+        tau=0.025,
+        hp=hp,
+        n_out_features=y_train.shape[2],
+        n_out_timesteps=y_train.shape[1]
+    ),
+    objective = 'val_loss',
+    max_trials=9,
+    directory='lstm-ae-05-16-1',
+    project_name='lstm-ae-low'
 )
 
-history_low = model_low.fit(train_dataset, validation_data=val_dataset, epochs=100)
-print('Low model fit')
-
-model_high = lstm_ae(
-    tau=0.995,
-    lstm_dim=8,
-    latent_dim=20,
-    n_out_features=2,
-    n_out_timesteps=25,
-    drop_frac=0.1
+rs_low.search(
+    train_dataset,
+    epochs=20,
+    validation_data=val_dataset
 )
 
-history_high = model_high.fit(train_dataset, validation_data=val_dataset, epochs=100)
-print('High model fit')
+model_low = rs_low.get_best_models(1)[0]
+
+rs_high = RandomSearch(
+    hypermodel = lambda hp: lstm_ae_hp(
+        tau=0.975,
+        hp=hp,
+        n_out_features=y_train.shape[2],
+        n_out_timesteps=y_train.shape[1]
+    ),
+    objective = 'val_loss',
+    max_trials=9,
+    directory='lstm-ae-05-16-1',
+    project_name='lstm-ae-high'
+)
+
+rs_high.search(
+    train_dataset,
+    epochs=20,
+    validation_data=val_dataset
+)
+
+model_high = rs_low.get_best_models(1)[0]
 
 
-with open('output/history_low.pkl', 'wb+') as f:
-    pickle.dump( history_low, f )
 
-with open('output/history_high.pkl', 'wb+') as f:
-    pickle.dump( history_high, f )
+# history_high = model_high.fit(train_dataset, validation_data=val_dataset, epochs=20)
+# print('High model fit')
+
+
+# with open('output/history_low-final.pkl', 'wb+') as f:
+#     pickle.dump( history_low, f )
+
+# with open('output/history_high-final.pkl', 'wb+') as f:
+#     pickle.dump( history_high, f )
 
 del X_train, y_train, train_dataset
 del X_val, y_val, val_dataset
 
-X_test = np.load(f'X_test_COGandDifoutput.npy')
-y_test = np.load(f'y_test_COGandDifoutput.npy')
+X_test = np.load('X_test_final.npy')
+y_test = np.load('y_test_final.npy')
 
 test_dataset = tf.data\
     .Dataset\

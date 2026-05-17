@@ -9,6 +9,7 @@ import zipfile
 from io import BytesIO
 import os
 from datetime import date
+from tqdm import tqdm
 
 import pandas as pd
 
@@ -27,7 +28,10 @@ COLUMNS = [
     'ROT',
     'SOG',
     'COG',
-    'Heading'
+    'Heading',
+    'Cargo type',
+    'Width',
+    'Length',
 ]
 
 dates = pd.date_range(
@@ -39,9 +43,8 @@ file_names = [
     for data_date in dates
 ]
 
-print(file_names)
+for file_name in tqdm(file_names):
 
-for file_name in file_names:
     response = requests.get(f'http://aisdata.ais.dk/{file_name}.zip')
     bytes_content = BytesIO( response.content )
     zip_file = zipfile.ZipFile(bytes_content)
@@ -59,25 +62,17 @@ for file_name in file_names:
     os.remove(f'{file_name}.csv')
 
     for ix, df_chunk in enumerate(df):
-        df_chunk[
+        df_tmp = df_chunk[
             (df_chunk['Latitude'].between(LAT_MIN_YIPENG, LAT_MAX_YIPENG)) &
             (df_chunk['Longitude'].between(LON_MIN_YIPENG, LON_MAX_YIPENG)) &
             (df_chunk['Ship type'] == 'Cargo') &
             ((df_chunk['Navigational status'] == 'Under way using engine') |
             (df_chunk['Navigational status'] == 'Under way sailing'))
-        ]\
-        [COLUMNS]\
-        .to_csv(f'data/yipeng/{file_name}-{ix}.csv')
+        ][COLUMNS]
 
-        df_chunk[
-            (df_chunk['Latitude'].between(LAT_MIN_ROSTOCK, LAT_MAX_ROSTOCK)) &
-            (df_chunk['Longitude'].between(LON_MIN_ROSTOCK, LON_MAX_ROSTOCK)) &
-            (df_chunk['Ship type'] == 'Cargo') &
-            ((df_chunk['Navigational status'] == 'Under way using engine') |
-            (df_chunk['Navigational status'] == 'Under way sailing'))
-        ]\
-        [COLUMNS]\
-        .to_csv(f'data/rostock/{file_name}-{ix}.csv')
+        df_tmp['Cargo type'].fillna( 'No additional information', inplace=True )
+
+        df_tmp.to_csv(f'data/ais/{file_name}-{ix}.csv')
 
     del df
     gc.collect()

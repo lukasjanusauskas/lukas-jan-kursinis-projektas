@@ -6,8 +6,8 @@ from itertools import product
 # DO NOT RUN IN HPC THIS:
 import matplotlib.pyplot as plt
 
-N_EST = 256
-MAX_D = 16
+N_EST = 32
+MAX_D = 8
 
 X_train = np.load('X_train_COGandDifoutput.npy')
 y_train = np.load('y_train_COGandDifoutput.npy')

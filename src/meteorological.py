@@ -8,6 +8,7 @@ Author: Lukas Janušauskas
 import requests
 import pandas as pd
 import numpy as np
+from datetime import date
 
 from datetime import datetime, timedelta
 import os
@@ -18,8 +19,6 @@ from dotenv import load_dotenv
 from time import sleep
 import json
 from itertools import product
-
-from src.util import get_dates
 
 
 load_dotenv()
@@ -57,8 +56,13 @@ from src.util import (
 )
 
 # The definition of the grid. In this case it is 40x40 grid
-MAX_CALLS = 7000
-N_DATES = 20
+
+dates = [
+    dt.to_pydatetime()
+    for dt in pd.date_range(start=date(2026,1,1),end=date(2026,3,1))
+]
+MAX_CALLS = 7260
+N_DATES = len(dates)
 NX, NY = int( np.sqrt(MAX_CALLS / N_DATES) ), int( np.sqrt(MAX_CALLS / N_DATES) )
 
 def get_stormglass_req(
@@ -87,7 +91,6 @@ def get_stormglass_req(
 
     except:
         traceback.print_exc()
-        print(response.content)
         return None
 
     # Handle the case when it breaks
@@ -127,6 +130,9 @@ def get_queries(
 
     # Get responses
     for ix, (lat, lon) in enumerate(coordinate_grid):
+
+        print(ix)
+
         # Go day by day
         ts_min = day
         ts_max = day + timedelta(days=1)
@@ -204,6 +210,6 @@ def construct_coordinate_grid() -> list:
 
 
 if __name__ == "__main__":
-    dates = get_dates('data_src/random_dates.txt')
+
     lat_lon_grid = construct_coordinate_grid()
-    get_weather_df(dates, lat_lon_grid, 'data_src/weather_df.csv')
+    get_weather_df(dates, lat_lon_grid, 'data/weather_df.csv')

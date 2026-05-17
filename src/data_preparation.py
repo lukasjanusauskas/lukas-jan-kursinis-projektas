@@ -1,3 +1,4 @@
+import os
 import sys
 import pickle
 import time
@@ -43,9 +44,6 @@ ANGLE_COLS = [
     'windDirection'
 ]
 
-SMOOTHING = True if sys.argv[1] == 'y' else False
-print('Smoothing:', SMOOTHING)
-
 def merge_with_meteo(
     row: pd.Series,
     weather_df: pd.DataFrame,
@@ -60,7 +58,8 @@ def merge_with_meteo(
     )
     lat, lon = coordinate_grid[indices]
 
-    time = row['hour']
+    time = pd.Timestamp( row['hour'] )
+
     weather_row = weather_df.loc[(time, lat, lon), :]
 
     data = np.concatenate( 
@@ -71,7 +70,7 @@ def merge_with_meteo(
     return pd.Series(data=data, index=columns)
 
 
-def feature_engineering(df: pd.DataFrame, return_timestamps: bool = False) -> pd.DataFrame:
+def feature_engineering(df: pd.DataFrame, return_timestamps: bool = False) -> tuple:
 
     # Calculate diff
     df['dif'] = ( df['Heading'] - df['COG']  + 180) % 360 - 180
@@ -148,7 +147,31 @@ def partition_days(days: list):
     )
 
 
+def read_dataset(data_src: str):
+
+    files = os.listdir(data_src)
+
+    dfs = []
+    for f in files:
+        date_info = [ int(i) for i in  f.split('-')[1:4] ]
+        if date(*date_info) > date(2026, 2, 1):
+            continue
+
+        df_tmp = pd.read_csv(
+            f'{data_src}/{f}',
+            parse_dates=['# Timestamp'],
+            dayfirst=True
+        ).drop(columns=['Unnamed: 0'])
+
+        dfs.append( df_tmp.copy() )
+        del df_tmp
+
+    return pd.concat(dfs)
+
+
 if __name__ == "__main__":
+
+    raw_df = read_dataset('data/ais')
 
     meteo_df = pd.read_csv(
         'data/weather_df.csv',
@@ -164,13 +187,6 @@ if __name__ == "__main__":
         .set_index( ['time', 'Latitude', 'Longitude'])\
         .drop(columns=['Unnamed: 0'])
 
-    raw_df = pd.read_csv(
-        'data/ais_dataset.csv',
-        parse_dates=['# Timestamp'],
-        dayfirst=True
-    ).drop(columns=['Unnamed: 0'])
-    print('read')
-
     print( 'AIS signals', raw_df.shape[0] )
 
     # We will groupby day also, so that we do not have huge gaps to interpolate
@@ -184,13 +200,17 @@ if __name__ == "__main__":
     all_time_diffs = []
     missing_count = 0
     above_interpolation_limit = 0
+    mmsi_timestamps = {}
 
     for (mmsi, day), group_df in grouped_df:
 
-        group_df = group_df.drop(columns=['day'])
+        group_df = group_df\
+            .drop(columns=['day', 'Navigational status'])\
+            .drop_duplicates()\
+            .sort_values('# Timestamp')
 
-        # We define a track to be at least 50 measurements, 
-        #   and does not have a gap bigger than 2 hours 
+        # We define a track to be at least 50 measurements,
+        #   and does not have a gap bigger than 2 hours
 
         time_diffs = group_df.reset_index()\
             ['# Timestamp']\
@@ -203,10 +223,15 @@ if __name__ == "__main__":
         if max_time_diff > INTERPOLATION_LIMIT:
             continue
 
+        static_df = group_df[['Cargo type', 'Width', 'Length', 'MMSI']]
+        static_df = static_df.resample('60s').first().ffill().bfill()
+
         # interpolate
-        group_df = group_df\
+        group_df = group_df[['Latitude', 'Longitude', 'SOG', 'COG', 'Heading']]\
             .resample('60s')\
             .median()
+
+        group_df = pd.concat([group_df, static_df], axis='columns')
 
         if group_df.dropna().shape[0] < 60:
             continue
@@ -230,11 +255,19 @@ if __name__ == "__main__":
             lambda row: merge_with_meteo(row, meteo_df, lat_lon_grid, lat_lon_tree),
             axis='columns'
         )
-        group_df = group_df.drop(columns=['hour']) 
+        group_df = group_df.drop(columns=['hour'])
 
         # create features such as dif and delta dif
-        group_df = feature_engineering(group_df)
-        group_df.dropna(inplace=True)
+        group_df, timestamps = feature_engineering(group_df, return_timestamps=True)
+
+        # Pasalinti NA ir atnaujinti timestamps pagal tai
+        na_mask = group_df.isna().any(axis=1)
+
+        group_df = group_df.loc[~na_mask, :].copy()
+        timestamps = timestamps[~na_mask].copy()
+
+        day_str = str(day.date() )
+        mmsi_timestamps[ (mmsi, day_str) ] = timestamps
 
         group_df['MMSI'] = int(mmsi)
         group_df['day'] = day
@@ -245,6 +278,9 @@ if __name__ == "__main__":
 
     print('Interpolated percentage:', missing_count / df.shape[0] * 100)
     np.save('output/gaps.npy', np.array(all_time_diffs))
+
+    df = pd.read_csv('data/df-prepared.csv')
+    df.drop(columns=['Cargo type', 'Width', 'Length'], inplace=True)
 
     min_max_scale_cols = [
         'SOG',
@@ -283,15 +319,29 @@ if __name__ == "__main__":
 
     for (mmsi, day), mmsi_df in df.groupby(['MMSI', 'day']):
 
-        mmsi_df.dropna(inplace=True)
+        # Pasalinti NA ir trackinti timestamps
+        na_mask = mmsi_df.isna().any(axis=1)
+        mmsi_df = mmsi_df.loc[~na_mask, :].copy()
+
+        day_str = str(day)
+
+        mmsi_timestamps[(mmsi, day_str)] = mmsi_timestamps\
+            [(mmsi, day_str)]\
+            [~na_mask].copy()
+
         mmsi_df.drop( columns=['MMSI', 'day'], inplace=True )
 
-        if SMOOTHING:
-            mmsi_df = mmsi_df\
-                .rolling(ROLLING_WINDOW_SIZE)\
-                .mean()
+        mmsi_df = mmsi_df\
+            .rolling(ROLLING_WINDOW_SIZE)\
+            .mean()
 
-            mmsi_df.dropna(inplace=True)
+        #  Isimt NA vel "for good measure"
+        na_mask = mmsi_df.isna().any(axis=1)
+        mmsi_df = mmsi_df.loc[~na_mask, :].copy()
+
+        mmsi_timestamps[(mmsi, day_str)] = mmsi_timestamps\
+            [(mmsi, day_str)]\
+            [~na_mask].copy()
 
         X_arr, y_arr = prepare_time_series(mmsi_df)
 
@@ -333,24 +383,27 @@ if __name__ == "__main__":
             all_mmsis.extend( [mmsi]*X_arr.shape[0] )
             all_days.extend( [day]*X_arr.shape[0] )
 
+    with open('timestamps-dict.npy', 'wb+') as f:
+        pickle.dump(mmsi_timestamps, f)
+
     np.array(all_mmsis).dump('all-mmsis-test.npy')
     np.array(all_days).dump('all-days-test.npy')
 
     print(len(all_days))
 
-    name_appendix = 'COGandDifoutput'
+    name_appendix = 'final'
 
     print( X_train.min() )
     print( X_train.max() )
     print( y_train.min() )
     print( y_train.max() )
 
-    np.save(f'X_train_{name_appendix}.npy', X_train)
-    np.save(f'y_train_{name_appendix}.npy', y_train)
-    np.save(f'X_val_{name_appendix}.npy', X_val)
-    np.save(f'y_val_{name_appendix}.npy', y_val)
-    np.save(f'X_test_{name_appendix}.npy', X_test)
-    np.save(f'y_test_{name_appendix}.npy', y_test)
+    # np.save(f'X_train_{name_appendix}.npy', X_train)
+    # np.save(f'y_train_{name_appendix}.npy', y_train)
+    # np.save(f'X_val_{name_appendix}.npy', X_val)
+    # np.save(f'y_val_{name_appendix}.npy', y_val)
+    # np.save(f'X_test_{name_appendix}.npy', X_test)
+    # np.save(f'y_test_{name_appendix}.npy', y_test)
 
     print('Total tracks:', total_mmsis_final)
 
@@ -367,5 +420,6 @@ if __name__ == "__main__":
     print('\nTest:')
     print(X_test.shape[0])
     print('Number of ships:', test_counts)
+
 
     print('Total sequences:', X_train.shape[0] + X_val.shape[0] + X_test.shape[0])
