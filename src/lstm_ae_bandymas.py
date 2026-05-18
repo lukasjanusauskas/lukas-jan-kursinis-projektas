@@ -55,7 +55,7 @@ rs_low = RandomSearch(
     ),
     objective = 'val_loss',
     max_trials=9,
-    directory='lstm-ae-05-16-1',
+    directory='lstm-ae-05-18-1',
     project_name='lstm-ae-low'
 )
 
@@ -76,7 +76,7 @@ rs_high = RandomSearch(
     ),
     objective = 'val_loss',
     max_trials=9,
-    directory='lstm-ae-05-16-1',
+    directory='lstm-ae-05-18-1',
     project_name='lstm-ae-high'
 )
 
@@ -86,7 +86,7 @@ rs_high.search(
     validation_data=val_dataset
 )
 
-model_high = rs_low.get_best_models(1)[0]
+model_high = rs_high.get_best_models(1)[0]
 
 
 
