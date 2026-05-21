@@ -2,6 +2,7 @@
 
 import tensorflow as tf
 from tensorflow.keras import layers, Model
+from keras.callbacks import EarlyStopping
 import numpy as np
 
 def quantile_loss(tau: float):

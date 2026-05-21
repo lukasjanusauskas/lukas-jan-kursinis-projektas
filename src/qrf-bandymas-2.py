@@ -4,11 +4,11 @@ import pickle
 from itertools import product
 import matplotlib.pyplot as plt
 
-X_train = np.load('X_train_COGandDifoutput.npy')
-y_train = np.load('y_train_COGandDifoutput.npy')
+X_train = np.load('X_train_final.npy')
+y_train = np.load('y_train_final.npy')
 
-X_val = np.load('X_val_COGandDifoutput.npy')
-y_val = np.load('y_val_COGandDifoutput.npy')
+X_val = np.load('X_val_final.npy')
+y_val = np.load('y_val_final.npy')
 
 reshape_params = (-1, X_train.shape[1]*X_train.shape[2])
 
@@ -51,12 +51,13 @@ def evaluate_metrics(
     }
 
 params = {
-    'n_estimators': [12],
-    'max_depth': [8],
+    'n_estimators': [4, 12, 32, 128],
+    'max_depth': [8, 16, 32],
 }
 
-picps = []
-pinaws = []
+"""
+picps_cog = []
+pinaws_cog = []
 
 for time_step in range(0, 25, 5):
 
@@ -83,21 +84,53 @@ for time_step in range(0, 25, 5):
         print(metrics)
 
     picp_mean = np.mean(picp_step)
-    picps.append(picp_mean)
+    picps_cog.append(picp_mean)
     print(picp_mean)
 
     pinaw_mean = np.mean(pinaw_step)
-    pinaws.append(pinaw_mean)
+    pinaws_cog.append(pinaw_mean)
     print(pinaw_mean)
     
 print('\n'*10)
-print(picps)
+print(picps_cog)
+print(pinaws_cog)
+"""
 
-plt.plot(picps)
-plt.show()
+picps_dif = []
+pinaws_dif = []
 
-print(pinaws)
+for time_step in range(0, 25, 5):
 
-plt.plot(pinaws)
-plt.show()
+    picp_step = []
+    pinaw_step = []
 
+    for _ in range(3):
+        y_train_cog, y_val_cog, y_train_dif, y_val_dif = prepare_output_data(time_step)
+
+        qrf_model = qrf.RandomForestQuantileRegressor(
+            n_estimators=16,
+            max_depth=8,
+            n_jobs=-1,
+            verbose=True
+        )
+
+        qrf_model.fit(X_train, y_train_dif)
+
+        metrics = evaluate_metrics(qrf_model, X_val, y_val_dif)
+
+        picp_step.append( metrics['picp'] )
+        pinaw_step.append( metrics['pinaw'] )
+
+        print(metrics)
+
+    picp_mean = np.mean(picp_step)
+    picps_dif.append(picp_mean)
+    print(picp_mean)
+
+    pinaw_mean = np.mean(pinaw_step)
+    pinaws_dif.append(pinaw_mean)
+    print(pinaw_mean)
+    
+print('\n'*10)
+print(picps_dif)
+print(pinaws_dif)

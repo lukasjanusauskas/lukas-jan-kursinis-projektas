@@ -1,9 +1,13 @@
 import pickle
 import numpy as np
-from xgboost import XGBRegressor
-from sklearn.metrics import mean_pinball_loss
+import quantile_forest as qrf
 
-def atlikti_rfe(best_params: dict, X_train, y_train, X_val, y_val, alpha, min_poz=2):
+BEST_PARAMS = {
+    'n_estimators': 3,
+    'max_depth': 4
+}
+
+def atlikti_rfe( X_train, y_train, X_val, y_val, min_poz=2, best_params: dict = BEST_PARAMS):
     # y_train, y_val - vienmaciai; alpha - kvantilis
 
     boolean_mask_features = [True]*X_train.shape[-1]
@@ -15,18 +19,23 @@ def atlikti_rfe(best_params: dict, X_train, y_train, X_val, y_val, alpha, min_po
         X_tmp_val = X_val[:, :, boolean_mask_features]
         X_tmp_val = X_tmp_val.reshape((X_tmp_val.shape[0], -1))
 
-        xgb_model = XGBRegressor(
-            objective='reg:quantileerror',
-            quantile_alpha=alpha,
+        qrf_model = qrf.RandomForestQuantileRegressor(
+            n_jobs=-1,
+            verbose=True,
             **best_params
         )
 
-        xgb_model.fit(X_tmp, y_train)
-        y_pred = xgb_model.predict(X_tmp_val)
-        loss = mean_pinball_loss(y_val, y_pred)
-        print('\nLoss:\n', loss)
+        qrf_model.fit(X_tmp, y_train)
+        y_pred = qrf_model.predict(X_tmp_val, quantiles=[0.025, 0.975])
+        y_pred_low, y_pred_high = y_pred[:, 0], y_pred[:, 1]
+        
+        picp = np.mean( (y_val > y_pred_low) & (y_val < y_pred_high) )
+        pinaw = np.mean( y_pred_high - y_pred_low ) / 2
+        cwc = pinaw * (1 + np.exp(0.1 * (0.95 - picp) ))
 
-        mdi_scores = xgb_model.feature_importances_
+        print('\nCWC:\n', cwc)
+
+        mdi_scores = qrf_model.feature_importances_
 
         mdis = np.mean(
             mdi_scores.reshape((25, sum(boolean_mask_features))),
@@ -66,40 +75,24 @@ X_val = np.load('X_val_final.npy')
 y_val = np.load('y_val_final.npy')
 
 bool_mask_rfe = atlikti_rfe(
-    best_params=gcv_cog_high_params,
     X_train=X_train,
     y_train=y_train[:, 0, 0],
     X_val=X_val,
     y_val=y_val[:, 0, 0],
-    alpha=0.975,
     min_poz=4
 )
 best_feats = np.array(list(range(19)))[bool_mask_rfe]
 with open('output/best-feats-low.pkl', 'wb+') as f:
     pickle.dump(best_feats, f)
 
-with open('output/low-gcv-cog.pkl', 'rb+') as f:
-    gcv_cog_low_params = pickle.load(f)
-
 bool_mask_rfe = atlikti_rfe(
-    best_params=gcv_cog_high_params,
     X_train=X_train,
-    y_train=y_train[:, 0, 0],
+    y_train=y_train[:, 0, 1],
     X_val=X_val,
-    y_val=y_val[:, 0, 0],
-    alpha=0.025,
+    y_val=y_val[:, 0, 1],
     min_poz=4
 )
 best_feats = np.array(list(range(19)))[bool_mask_rfe]
-with open('output/best-feats-high.pkl', 'wb+') as f:
+
+with open('output/best-feats-high-qrf.pkl', 'wb+') as f:
     pickle.dump(best_feats, f)
-
-"""
-with open('output/high-gcv-diff.pkl', 'rb+') as f:
-    gcv_diff_high_params = pickle.load(f)
-
-with open('output/low-gcv-cog.pkl', 'rb+') as f:
-    gcv_cog_low_params = pickle.load(f)
-with open('output/low-gcv-diff.pkl', 'rb+') as f:
-    gcv_diff_low_params = pickle.load(f)
-"""
