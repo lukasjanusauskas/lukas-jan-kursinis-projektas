@@ -65,9 +65,6 @@ MAX_CALLS = 7260
 N_DATES = len(dates)
 NX, NY = int( np.sqrt(MAX_CALLS / N_DATES) ), int( np.sqrt(MAX_CALLS / N_DATES) )
 
-print( NX, NY )
-exit()
-
 def get_stormglass_req(
     lon: float,
     lat: float,

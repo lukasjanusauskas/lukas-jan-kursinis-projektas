@@ -87,10 +87,10 @@ def feature_engineering(df: pd.DataFrame, return_timestamps: bool = False) -> tu
     # Do min-max scaling to [-1, 1]
     df['COG'] = 180 - np.abs(180 - df['COG'])
     df['COG'] = (df['COG'] - 90) / 90
-    df['COG-dif'] = df['COG'].diff(1) / 2
+    df['COG-dif'] = np.cbrt( df['COG'].diff(1) / 2 )
 
     df['dif'] = df['dif'] / 180
-    df['delta_dif'] = df['dif'].diff(1) / 2
+    df['delta_dif'] = np.cbrt( df['dif'].diff(1) / 2 )
 
     df.drop(columns=['dif'], inplace=True)
 
@@ -189,6 +189,9 @@ if __name__ == "__main__":
 
     print( 'AIS signals', raw_df.shape[0] )
 
+    # Fix SOG
+    raw_df.loc[raw_df['SOG'] > 25, 'SOG'] = np.nan
+
     # We will groupby day also, so that we do not have huge gaps to interpolate
     raw_df['day'] = raw_df['# Timestamp'].dt.normalize()
 
@@ -274,7 +277,7 @@ if __name__ == "__main__":
         dfs.append( group_df )
 
     df = pd.concat( dfs, ignore_index=True )
-    df.to_csv('data/df-prepared.csv', index=False)
+    # df.to_csv('data/df-prepared.csv', index=False)
 
     print('Interpolated percentage:', missing_count / df.shape[0] * 100)
     np.save('output/gaps.npy', np.array(all_time_diffs))
@@ -301,8 +304,10 @@ if __name__ == "__main__":
     print(df.min())
 
     # https://stackoverflow.com/questions/41993565/save-minmaxscaler-model-in-sklearn
-    with open('output/min-max-scaler.pkl', 'wb+') as f:
-        pickle.dump( scaler, f)
+    # with open('output/min-max-scaler.pkl', 'wb+') as f:
+        # pickle.dump( scaler, f)
+
+    print(df.columns)
 
     # Prepare time series and concatenate
     # initialize arrays as null
@@ -391,19 +396,19 @@ if __name__ == "__main__":
 
     print(len(all_days))
 
-    name_appendix = 'final'
+    name_appendix = 'final-final'
 
     print( X_train.min() )
     print( X_train.max() )
     print( y_train.min() )
     print( y_train.max() )
 
-    # np.save(f'X_train_{name_appendix}.npy', X_train)
-    # np.save(f'y_train_{name_appendix}.npy', y_train)
-    # np.save(f'X_val_{name_appendix}.npy', X_val)
-    # np.save(f'y_val_{name_appendix}.npy', y_val)
-    # np.save(f'X_test_{name_appendix}.npy', X_test)
-    # np.save(f'y_test_{name_appendix}.npy', y_test)
+    np.save(f'X_train_{name_appendix}.npy', X_train)
+    np.save(f'y_train_{name_appendix}.npy', y_train)
+    np.save(f'X_val_{name_appendix}.npy', X_val)
+    np.save(f'y_val_{name_appendix}.npy', y_val)
+    np.save(f'X_test_{name_appendix}.npy', X_test)
+    np.save(f'y_test_{name_appendix}.npy', y_test)
 
     print('Total tracks:', total_mmsis_final)
 

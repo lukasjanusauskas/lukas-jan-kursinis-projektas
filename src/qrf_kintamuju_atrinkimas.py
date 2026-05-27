@@ -3,11 +3,11 @@ import numpy as np
 import quantile_forest as qrf
 
 BEST_PARAMS = {
-    'n_estimators': 3,
-    'max_depth': 4
+    'n_estimators': 128,
+    'max_depth': 16
 }
 
-def atlikti_rfe( X_train, y_train, X_val, y_val, min_poz=2, best_params: dict = BEST_PARAMS):
+def atlikti_rfe( X_train, y_train, X_val, y_val, min_poz=2, best_params: dict = BEST_PARAMS, step=4):
     # y_train, y_val - vienmaciai; alpha - kvantilis
 
     boolean_mask_features = [True]*X_train.shape[-1]
@@ -28,7 +28,7 @@ def atlikti_rfe( X_train, y_train, X_val, y_val, min_poz=2, best_params: dict = 
         qrf_model.fit(X_tmp, y_train)
         y_pred = qrf_model.predict(X_tmp_val, quantiles=[0.025, 0.975])
         y_pred_low, y_pred_high = y_pred[:, 0], y_pred[:, 1]
-        
+
         picp = np.mean( (y_val > y_pred_low) & (y_val < y_pred_high) )
         pinaw = np.mean( y_pred_high - y_pred_low ) / 2
         cwc = pinaw * (1 + np.exp(0.1 * (0.95 - picp) ))
@@ -47,7 +47,7 @@ def atlikti_rfe( X_train, y_train, X_val, y_val, min_poz=2, best_params: dict = 
         # Retrieved 2026-05-18, License - CC BY-SA 4.0
 
         sorted_indices = sorted(range(len(mdis)), key=lambda k: mdis[k])
-        drop_indices = sorted_indices[:2]
+        drop_indices = sorted_indices[:step]
 
         drop_indices_for_mask = [list_features[i] for i in drop_indices]
 
@@ -79,7 +79,7 @@ bool_mask_rfe = atlikti_rfe(
     y_train=y_train[:, 0, 0],
     X_val=X_val,
     y_val=y_val[:, 0, 0],
-    min_poz=4
+    min_poz=9
 )
 best_feats = np.array(list(range(19)))[bool_mask_rfe]
 with open('output/best-feats-low.pkl', 'wb+') as f:
@@ -90,9 +90,10 @@ bool_mask_rfe = atlikti_rfe(
     y_train=y_train[:, 0, 1],
     X_val=X_val,
     y_val=y_val[:, 0, 1],
-    min_poz=4
+    min_poz=9
 )
 best_feats = np.array(list(range(19)))[bool_mask_rfe]
 
 with open('output/best-feats-high-qrf.pkl', 'wb+') as f:
     pickle.dump(best_feats, f)
+

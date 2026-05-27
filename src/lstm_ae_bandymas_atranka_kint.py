@@ -200,6 +200,11 @@ print(
     np.mean( ( y_true > y_pred_low ) & ( y_true < y_pred_high) )
 )
 
+print(
+    'Pilno modelio PINAW',
+    np.mean( np.abs(y_pred_high - y_pred_low) ) * 0.5
+)
+
 y_true.dump('test-set-y_true-sel.npy')
 y_pred_low.dump('test-set-y_pred_low-sel.npy')
 y_pred_high.dump('test-set-y_pred_high-sel.npy')
@@ -225,6 +230,11 @@ print(
     np.mean( ( y_true > y_pred_low ) & ( y_true < y_pred_high) )
 )
 
+
+print(
+    'RFE modelio PINAW',
+    np.mean( np.abs(y_pred_high - y_pred_low) ) * 0.5
+)
 
 y_true.dump('test-set-y_true-full.npy')
 y_pred_low.dump('test-set-y_pred_low-full.npy')

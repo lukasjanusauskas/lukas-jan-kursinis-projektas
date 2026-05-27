@@ -2,12 +2,16 @@
 
 import numpy as np
 from src.lstm_ae_funkcijos import (
-    # lstm_ae,
+    lstm_ae,
     lstm_ae_hp
 )
-from keras_tuner import RandomSearch
+from keras_tuner import (
+    # RandomSearch,
+    GridSearch
+)
 import tensorflow as tf
-# import pickle
+import pickle
+from keras.callbacks import EarlyStopping
 
 # DO NOT IMPORT THIS IN HPC
 # import matplotlib.pyplot as plt
@@ -29,6 +33,7 @@ y_val = np.load('y_val_final.npy')
 print( X_train.shape )
 print( X_val.shape )
 
+
 # https://www.tensorflow.org/tutorials/load_data/numpy:
 train_dataset = tf.data\
     .Dataset\
@@ -46,7 +51,7 @@ val_dataset = tf.data\
     .batch(BATCH_SIZE)\
     .shuffle(buffer_size=10_000)
 
-rs_low = RandomSearch(
+gs_low = GridSearch(
     hypermodel = lambda hp: lstm_ae_hp(
         tau=0.025,
         hp=hp,
@@ -54,20 +59,40 @@ rs_low = RandomSearch(
         n_out_timesteps=y_train.shape[1]
     ),
     objective = 'val_loss',
-    max_trials=9,
-    directory='lstm-ae-05-18-1',
+    directory='lstm-ae-05-24-1',
     project_name='lstm-ae-low'
 )
 
-rs_low.search(
+gs_low.search(
     train_dataset,
     epochs=20,
     validation_data=val_dataset
 )
 
-model_low = rs_low.get_best_models(1)[0]
+hyper_low = gs_low.get_best_hyperparameters()[0]
+model_low = lstm_ae(
+    tau=0.025,
+    n_out_features=2,
+    n_out_timesteps=25,
+    **hyper_low.values
+)
+print(hyper_low)
 
-rs_high = RandomSearch(
+print( hyper_low.values, sep='\n' )
+print(
+      'lstm_dim', hyper_low.get('lstm_dim'),
+      'latent_dim', hyper_low.get('latent_dim'),
+      'drop_frac', hyper_low.get('drop_frac'),
+      'l1', hyper_low.get('l1'),
+)
+print(gs_low.get_best_hyperparameters())
+history_low = model_low.fit(train_dataset, validation_data=val_dataset, epochs=100,
+                            callbacks=EarlyStopping(patience=20))
+
+print('Low model fit')
+
+
+gs_high = GridSearch(
     hypermodel = lambda hp: lstm_ae_hp(
         tau=0.975,
         hp=hp,
@@ -75,30 +100,40 @@ rs_high = RandomSearch(
         n_out_timesteps=y_train.shape[1]
     ),
     objective = 'val_loss',
-    max_trials=9,
-    directory='lstm-ae-05-18-1',
+    directory='lstm-ae-05-24-1',
     project_name='lstm-ae-high'
 )
 
-rs_high.search(
+gs_high.search(
     train_dataset,
     epochs=20,
     validation_data=val_dataset
 )
 
-model_high = rs_high.get_best_models(1)[0]
+hyper_high = gs_high.get_best_hyperparameters()[0]
+model_high = lstm_ae(
+    tau=0.975,
+    n_out_features=2,
+    n_out_timesteps=25,
+    **hyper_high.values
+)
+print(
+      'lstm_dim', hyper_high.get('lstm_dim'),
+      'latent_dim', hyper_high.get('latent_dim'),
+      'drop_frac', hyper_high.get('drop_frac'),
+      'l1', hyper_high.get('l1'),
+)
+history_high = model_high.fit(train_dataset, validation_data=val_dataset, epochs=100,
+                              callbacks=EarlyStopping(patience=20))
+
+print('High model fit')
 
 
+with open('output/history_low-final.pkl', 'wb+') as f:
+    pickle.dump( history_low.history, f )
 
-# history_high = model_high.fit(train_dataset, validation_data=val_dataset, epochs=20)
-# print('High model fit')
-
-
-# with open('output/history_low-final.pkl', 'wb+') as f:
-#     pickle.dump( history_low, f )
-
-# with open('output/history_high-final.pkl', 'wb+') as f:
-#     pickle.dump( history_high, f )
+with open('output/history_high-final.pkl', 'wb+') as f:
+    pickle.dump( history_high.history, f )
 
 del X_train, y_train, train_dataset
 del X_val, y_val, val_dataset
@@ -122,6 +157,7 @@ for X_batch, y_batch in test_dataset.as_numpy_iterator():
     y_true.append(y_batch)
     y_pred_low.append(
         model_low.predict(X_batch, verbose=0))
+
     y_pred_high.append(
         model_high.predict(X_batch, verbose=0))
 
@@ -152,10 +188,16 @@ print(
     np.mean( np.abs(y_pred_high - y_pred_low), axis=0)
 )
 
+picp_through_time = np.mean( (y_pred_high >= y_true) & (y_pred_low <= y_true), axis=0)
+with open('output/picp-through-time.npy', 'wb+') as f:
+    np.save(f, picp_through_time)
+
+pinaw_through_time = np.mean( np.abs(y_pred_high - y_pred_low), axis=0)
+with open('output/pinaw-through-time.npy', 'wb+') as f:
+    np.save(f, pinaw_through_time)
 
 y_pred_low = model_low.predict(anom_x)
 y_pred_high = model_high.predict(anom_x)
 
 y_pred_low.dump('anom-y_pred_low.npy')
 y_pred_high.dump('anom-y_pred_high.npy')
-

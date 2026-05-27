@@ -5,6 +5,14 @@ import pickle
 N_EST = 128
 MAX_D = 16
 
+indices = np.load('output/best-feats-high-qrf.pkl', allow_pickle=True)
+print(indices)
+
+indices = np.load('output/best-feats-low-qrf.pkl', allow_pickle=True)
+print(indices)
+
+exit()
+
 X_train = np.load('X_train_final.npy')
 y_train = np.load('y_train_final.npy')
 
