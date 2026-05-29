@@ -95,6 +95,9 @@ with open('output/picps_cog_qrf.pkl', 'wb+') as f:
 with open('output/picps_cog_params.pkl', 'wb+') as f:
     pickle.dump(param_sets, f)
 
+"""
+
+# Paleist pasitikrinimui:
 picps_dif = []
 pinaws_dif = []
 
@@ -133,3 +136,5 @@ with open('output/picps_dif_qrf.pkl', 'wb+') as f:
     pickle.dump(pinaws_dif, f)
 with open('output/picps_dif_params.pkl', 'wb+') as f:
     pickle.dump(param_sets, f)
+
+"""

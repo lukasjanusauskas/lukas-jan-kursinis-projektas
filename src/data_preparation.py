@@ -1,7 +1,6 @@
 import os
 import sys
 import pickle
-import time
 import pandas as pd # type: ignore
 import random
 import numpy as np
@@ -19,23 +18,23 @@ from pandas.errors import PerformanceWarning # type: ignore
 warnings.filterwarnings("ignore", category=PerformanceWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# Coordinate grid
+# Regiono koordinates
 from src.util import (
     LAT_MIN, LAT_MAX,
     LON_MIN, LON_MAX
 )
 from src.meteorological import construct_coordinate_grid
 
-# Constants for time step configuration
+#Konstantos slenkancio lango  
 
 STEP_BACK_DEFAULT = 25
 STEP_FORW_DEFAULT = 25
 ROLLING_WINDOW_SIZE = 25
 
-# Interpolation limit of two hours is set because it is standard in literature
+#Ribojimas laikas (valandomis) kuri gali AIS signalo nebuti
 INTERPOLATION_LIMIT = 2
 
-# Will be required for: calculating components (sine, cosine) and interpolation clipping
+#Sinuso, kosinuso skai2iavimai bus atlikti:
 ANGLE_COLS = [
     'COG',
     'currentDirection',
@@ -277,7 +276,7 @@ if __name__ == "__main__":
         dfs.append( group_df )
 
     df = pd.concat( dfs, ignore_index=True )
-    # df.to_csv('data/df-prepared.csv', index=False)
+    df.to_csv('data/df-prepared.csv', index=False)
 
     print('Interpolated percentage:', missing_count / df.shape[0] * 100)
     np.save('output/gaps.npy', np.array(all_time_diffs))
@@ -300,12 +299,9 @@ if __name__ == "__main__":
         df[min_max_scale_cols].values
     )
 
-    print(df.max())
-    print(df.min())
-
     # https://stackoverflow.com/questions/41993565/save-minmaxscaler-model-in-sklearn
-    # with open('output/min-max-scaler.pkl', 'wb+') as f:
-        # pickle.dump( scaler, f)
+    with open('output/min-max-scaler.pkl', 'wb+') as f:
+        pickle.dump( scaler, f)
 
     print(df.columns)
 
@@ -321,6 +317,9 @@ if __name__ == "__main__":
 
     all_mmsis = []
     all_days = []
+
+    val_mmsis = []
+    val_day = []
 
     for (mmsi, day), mmsi_df in df.groupby(['MMSI', 'day']):
 
@@ -365,7 +364,7 @@ if __name__ == "__main__":
                 X_train = np.concatenate([X_train, X_arr], axis=0)
                 y_train = np.concatenate([y_train, y_arr], axis=0)
 
-        elif day in test_days:
+        elif day in val_days:
 
             val_counts += 1
 
@@ -374,6 +373,9 @@ if __name__ == "__main__":
             else:
                 X_val = np.concatenate([X_val, X_arr], axis=0)
                 y_val = np.concatenate([y_val, y_arr], axis=0)
+
+            val_mmsis.extend( [mmsi]*X_arr.shape[0] )
+            val_day.extend( [day]*X_arr.shape[0] )
 
         else:
 
@@ -394,21 +396,12 @@ if __name__ == "__main__":
     np.array(all_mmsis).dump('all-mmsis-test.npy')
     np.array(all_days).dump('all-days-test.npy')
 
-    print(len(all_days))
-
-    name_appendix = 'final-final'
-
-    print( X_train.min() )
-    print( X_train.max() )
-    print( y_train.min() )
-    print( y_train.max() )
-
-    np.save(f'X_train_{name_appendix}.npy', X_train)
-    np.save(f'y_train_{name_appendix}.npy', y_train)
-    np.save(f'X_val_{name_appendix}.npy', X_val)
-    np.save(f'y_val_{name_appendix}.npy', y_val)
-    np.save(f'X_test_{name_appendix}.npy', X_test)
-    np.save(f'y_test_{name_appendix}.npy', y_test)
+    np.save('X_train_final.npy', X_train)
+    np.save('y_train_final.npy', y_train)
+    np.save('X_val_final.npy', X_val)
+    np.save('y_val_final.npy', y_val)
+    np.save('X_test_final.npy', X_test)
+    np.save('y_test_final.npy', y_test)
 
     print('Total tracks:', total_mmsis_final)
 

@@ -11,8 +11,6 @@ print(indices)
 indices = np.load('output/best-feats-low-qrf.pkl', allow_pickle=True)
 print(indices)
 
-exit()
-
 X_train = np.load('X_train_final.npy')
 y_train = np.load('y_train_final.npy')
 
