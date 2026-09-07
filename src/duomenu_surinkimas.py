@@ -15,9 +15,7 @@ import pandas as pd
 
 # Apibrėžiame du regionus
 LAT_MIN_YIPENG, LAT_MAX_YIPENG = 54.5, 56.5
-LON_MIN_YIPENG, LON_MAX_YIPENG = 15.0, 18.0
-LAT_MIN_ROSTOCK, LAT_MAX_ROSTOCK = 54.08, 54.35
-LON_MIN_ROSTOCK, LON_MAX_ROSTOCK = 11.86, 12.22
+LON_MIN_YIPENG, LON_MAX_YIPENG = 13.0, 18.0
 
 COLUMNS = [
     '# Timestamp',
@@ -35,44 +33,53 @@ COLUMNS = [
 ]
 
 dates = pd.date_range(
-    start=date(2026,1,1),
-    end=date(2026,3,1)
+    start=date(2024,11,15),
+    end=date(2024,12,15)
 )
-file_names = [
-    f"aisdk-{data_date.to_pydatetime().strftime('%Y-%m-%d')}"
+dates = [
+    data_date.to_pydatetime()
     for data_date in dates
 ]
 
-for file_name in tqdm(file_names):
+if __name__ == '__main__':
+    for date_ in tqdm(dates):
 
-    response = requests.get(f'http://aisdata.ais.dk/{file_name}.zip')
-    bytes_content = BytesIO( response.content )
-    zip_file = zipfile.ZipFile(bytes_content)
+        url_dir = date_.strftime('%Y')
+        file_name = f"aisdk-{date_.strftime('%Y-%m-%d')}"
 
-    zip_file.extractall()
+        response = requests.get(f'http://aisdata.ais.dk/{url_dir}/{file_name}.zip')
+        bytes_content = BytesIO( response.content )
 
-    del bytes_content
-    gc.collect()
+        if response.status_code != 200:
+            print(response.url)
 
-    df = pd.read_csv(
-        f'{file_name}.csv',
-        chunksize=2**20
-    )
+        with zipfile.ZipFile(bytes_content) as zip_file:
 
-    os.remove(f'{file_name}.csv')
+            zip_file.extractall()
+            del bytes_content
+            gc.collect()
 
-    for ix, df_chunk in enumerate(df):
-        df_tmp = df_chunk[
-            (df_chunk['Latitude'].between(LAT_MIN_YIPENG, LAT_MAX_YIPENG)) &
-            (df_chunk['Longitude'].between(LON_MIN_YIPENG, LON_MAX_YIPENG)) &
-            (df_chunk['Ship type'] == 'Cargo') &
-            ((df_chunk['Navigational status'] == 'Under way using engine') |
-            (df_chunk['Navigational status'] == 'Under way sailing'))
-        ][COLUMNS]
+        print(file_name)
 
-        df_tmp['Cargo type'].fillna( 'No additional information', inplace=True )
+        df = pd.read_csv(
+            f'{file_name}.csv',
+            chunksize=2**20
+        )
 
-        df_tmp.to_csv(f'data/ais/{file_name}-{ix}.csv')
+        os.remove(f'{file_name}.csv')
 
-    del df
-    gc.collect()
+        for ix, df_chunk in enumerate(df):
+            df_tmp = df_chunk[
+                (df_chunk['Latitude'].between(LAT_MIN_YIPENG, LAT_MAX_YIPENG)) &
+                (df_chunk['Longitude'].between(LON_MIN_YIPENG, LON_MAX_YIPENG)) &
+                ((df_chunk['Ship type'] == 'Cargo') | (df_chunk['Ship type'] == 'Tanker') ) &
+                ((df_chunk['Navigational status'] == 'Under way using engine') |
+                (df_chunk['Navigational status'] == 'Under way sailing'))
+            ][COLUMNS]
+
+            df_tmp['Cargo type'].fillna( 'No additional information', inplace=True )
+
+            df_tmp.to_csv(f'data/ais/{file_name}-{ix}.csv')
+
+        del df
+        gc.collect()

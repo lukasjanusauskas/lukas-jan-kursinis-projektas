@@ -1,15 +1,11 @@
 """
-This is a script to get the meteorological data.
-Also, most constants I used are defined here.
-
-Author: Lukas Janušauskas
+Cia surenkami meteorologiniai duomenys
 """
 
 import requests
 import pandas as pd
 import numpy as np
 from datetime import date
-from tqdm import tqdm
 
 from datetime import datetime, timedelta
 import os
@@ -51,18 +47,19 @@ ORGANIZATIONS = {
     'windSpeed': 'noaa',
 }
 
-from src.duomenu_surinkimas import (
-    LAT_MIN_YIPENG, LAT_MAX_YIPENG,
-    LON_MIN_YIPENG, LON_MAX_YIPENG
-)
+LON_MIN = 18.5
+LON_MAX = 20.5
+LAT_MIN = 57.0
+LAT_MAX = 60.5
+
+# The definition of the grid. In this case it is 40x40 grid
 
 dates = [
     dt.to_pydatetime()
-    for dt in pd.date_range(
-        start=date(2024,11,1),
-        end=date(2025,1,1)
-    )
+    # for dt in pd.date_range(start=date(2026,1,1),end=date(2026,5,31))
+    for dt in pd.date_range(start=date(2024,12,25),end=date(2025,1,26))
 ]
+N_DATES = len(dates)
 
 def get_stormglass_req(
     lon: float,
@@ -134,11 +131,14 @@ def get_queries(
         ts_min = day
         ts_max = day + timedelta(days=1)
 
+        print(f"Get (longitude: {lon}, latitude: {lat}) for {ts_min}")
+
         response = get_stormglass_req(lon, lat, ts_min, ts_max)
 
         # Sleep for 20 seconds, if it fails and try again. stormglass does send 5XX errors a lot
         if response is None:
             print("Response count", ix+1)
+            print(f"Didn't get ({lat, lon}) for {ts_min}")
 
             sleep(20)
             response = get_stormglass_req(lon, lat, ts_min, ts_max)
@@ -153,7 +153,7 @@ def get_queries(
 
 
 def pick_organizations(data_different_organizations: dict) -> dict:
-    
+
     output: dict = {}
 
     for measure, values_organizations in data_different_organizations.items():
@@ -183,7 +183,7 @@ def get_weather_df(
 
     stormglass_responses = []
 
-    for day in tqdm(dates):
+    for day in dates:
         day_responses = get_queries(day, coordinate_grid)
         stormglass_responses.extend( day_responses )
 
@@ -200,13 +200,13 @@ def get_weather_df(
 
 
 def construct_coordinate_grid(step=0.5) -> list:
-    lat_arr = np.arange(LAT_MIN_YIPENG, LAT_MAX_YIPENG+step, step=step)
-    lon_arr = np.arange(LON_MIN_YIPENG, LON_MAX_YIPENG+step, step=step)
+    lat_arr = np.arange(LAT_MIN, LAT_MAX+step, step=step)
+    lon_arr = np.arange(LON_MIN, LON_MAX+step, step=step)
 
     return list(product(lat_arr, lon_arr))
 
 
 if __name__ == "__main__":
 
-    lat_lon_grid = construct_coordinate_grid()
-    get_weather_df(dates, lat_lon_grid, 'data/weather_df.csv')
+    lat_lon_grid = construct_coordinate_grid(step=0.5)
+    get_weather_df(dates, lat_lon_grid, 'data/weather_df_eagles_vezhen.csv')

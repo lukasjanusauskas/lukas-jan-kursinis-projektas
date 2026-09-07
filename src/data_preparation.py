@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler # type: ignore
 
 from scipy.spatial import cKDTree # type: ignore
-from scipy.stats import boxcox
 from itertools import product
 
 import warnings
@@ -19,9 +18,9 @@ warnings.filterwarnings("ignore", category=PerformanceWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 # Regiono koordinates
-from src.util import (
-    LAT_MIN, LAT_MAX,
-    LON_MIN, LON_MAX
+from src.duomenu_surinkimas import (
+    LAT_MIN_YIPENG, LAT_MAX_YIPENG,
+    LON_MIN_YIPENG, LON_MAX_YIPENG
 )
 from src.meteorological import construct_coordinate_grid
 
@@ -29,10 +28,15 @@ from src.meteorological import construct_coordinate_grid
 
 STEP_BACK_DEFAULT = 25
 STEP_FORW_DEFAULT = 25
-ROLLING_WINDOW_SIZE = 25
 
 #Ribojimas laikas (valandomis) kuri gali AIS signalo nebuti
 INTERPOLATION_LIMIT = 2
+
+# Average number of minutes to which down-sample
+DOWN_SAMPLE_MINUTES = 1
+
+# Maximum gap in the series to discard in minutes
+GAP_LIMIT = 120
 
 #Sinuso, kosinuso skai2iavimai bus atlikti:
 ANGLE_COLS = [
@@ -86,14 +90,21 @@ def feature_engineering(df: pd.DataFrame, return_timestamps: bool = False) -> tu
     # Do min-max scaling to [-1, 1]
     df['COG'] = 180 - np.abs(180 - df['COG'])
     df['COG'] = (df['COG'] - 90) / 90
-    df['COG-dif'] = np.cbrt( df['COG'].diff(1) / 2 )
+    df['COG-dif'] = np.cbrt( df['COG'].diff(1) )
+
+    df['COG-dif'] = df['COG-dif']\
+        .rolling(5)\
+        .mean()
 
     df['dif'] = df['dif'] / 180
     df['delta_dif'] = np.cbrt( df['dif'].diff(1) / 2 )
 
-    df.drop(columns=['dif'], inplace=True)
+    df['delta_dif'] = df['delta_dif']\
+        .rolling(5)\
+        .mean()
 
-    columns_to_drop = ['# Timestamp', 'MMSI', 'Latitude', 'Longitude']
+    df.drop(columns=['dif'], inplace=True)
+    columns_to_drop = ['# Timestamp', 'MMSI']
 
     if return_timestamps:
         timestamps = df['# Timestamp'].values
@@ -130,20 +141,31 @@ def prepare_time_series(
     return X_arr[n_lags:-n_lags, :, :], y_arr[n_lags:-n_lags, :, :]
 
 
-def partition_days(days: list):
+def partition_groups(mmsi_day):
 
-    days_shuffled = days.copy()
-    random.shuffle( days_shuffled )
+    groups_shuffled = mmsi_day.copy()
+    random.shuffle( mmsi_day )
 
-    n = len(days_shuffled)
+    n = len(mmsi_day)
     n_train = int(0.7 * n)
     n_val = int( 0.85 * n )
 
     return (
-        days_shuffled[:n_train],
-        days_shuffled[n_train:n_val],
-        days_shuffled[n_val:]
+        groups_shuffled[:n_train],
+        groups_shuffled[n_train:n_val],
+        groups_shuffled[n_val:]
     )
+
+
+def belongs_in(mmsi_day, group_list):
+
+    mmsi, day = mmsi_day
+
+    for (mmsi_group, day_group) in group_list:
+        if mmsi_group == mmsi and day_group == day:
+            return True
+
+    return False
 
 
 def read_dataset(data_src: str):
@@ -198,56 +220,47 @@ if __name__ == "__main__":
         .set_index('# Timestamp')\
         .groupby(['MMSI', 'day'])
 
+    print('GOT HERE')
+
     dfs = []
     all_time_diffs = []
-    missing_count = 0
     above_interpolation_limit = 0
     mmsi_timestamps = {}
 
     for (mmsi, day), group_df in grouped_df:
 
         group_df = group_df\
-            .drop(columns=['day', 'Navigational status'])\
-            .drop_duplicates()\
-            .sort_values('# Timestamp')
+            [['Latitude', 'Longitude', 'SOG', 'COG', 'Heading']]\
+            .drop_duplicates()
 
         # We define a track to be at least 50 measurements,
         #   and does not have a gap bigger than 2 hours
-
         time_diffs = group_df.reset_index()\
             ['# Timestamp']\
             .diff(1)
 
-        time_diffs = time_diffs / timedelta(minutes=1)
+        time_diffs = (time_diffs / timedelta(minutes=1)).dropna()
         all_time_diffs.extend( list(time_diffs) )
 
-        max_time_diff = max(all_time_diffs)
-        if max_time_diff > INTERPOLATION_LIMIT:
+        # Skip, if the time difference is too big
+        max_time_diff = np.max(time_diffs)
+        if max_time_diff > GAP_LIMIT:
             continue
-
-        static_df = group_df[['Cargo type', 'Width', 'Length', 'MMSI']]
-        static_df = static_df.resample('60s').first().ffill().bfill()
 
         # interpolate
+        down_sample_seconds = DOWN_SAMPLE_MINUTES * 60
         group_df = group_df[['Latitude', 'Longitude', 'SOG', 'COG', 'Heading']]\
-            .resample('60s')\
-            .median()
+            .resample(f'{down_sample_seconds}s')\
+            .first()
 
-        group_df = pd.concat([group_df, static_df], axis='columns')
+        group_df['MMSI'] = mmsi
+        group_df['day'] = day
 
-        if group_df.dropna().shape[0] < 60:
+        # At least 50
+        if group_df.dropna().shape[0] < 50:
             continue
 
-        missing_count += np.sum( group_df.isnull() )
-
-        group_df = group_df\
-            .interpolate('pchip')\
-            .reset_index()
-
-        # To correct interpolation errors
-        # https://numpy.org/doc/2.1/reference/generated/numpy.clip.html
-        group_df['Heading'] = np.clip( group_df['Heading'], 0, 360 )
-        group_df['COG'] = np.clip( group_df['COG'], 0, 360 )
+        group_df = group_df.dropna().reset_index()
 
         # Source: https://stackoverflow.com/questions/28773342/truncate-timestamp-column-to-hour-precision-in-pandas-dataframe
         group_df['hour'] = group_df['# Timestamp'].dt.round('h')
@@ -268,23 +281,22 @@ if __name__ == "__main__":
         group_df = group_df.loc[~na_mask, :].copy()
         timestamps = timestamps[~na_mask].copy()
 
-        day_str = str(day.date() )
-        mmsi_timestamps[ (mmsi, day_str) ] = timestamps
+        mmsi_timestamps[ (mmsi, day) ] = timestamps
 
         group_df['MMSI'] = int(mmsi)
         group_df['day'] = day
         dfs.append( group_df )
 
     df = pd.concat( dfs, ignore_index=True )
+    df.drop(columns=['Latitude', 'Longitude'], inplace=True)
     df.to_csv('data/df-prepared.csv', index=False)
 
-    print('Interpolated percentage:', missing_count / df.shape[0] * 100)
+    print('Done with initial data preparation')
     np.save('output/gaps.npy', np.array(all_time_diffs))
 
-    df = pd.read_csv('data/df-prepared.csv')
-    df.drop(columns=['Cargo type', 'Width', 'Length'], inplace=True)
-
     min_max_scale_cols = [
+        # 'Latitude',
+        # 'Longitude',
         'SOG',
         'currentSpeed',
         'gust',
@@ -294,7 +306,6 @@ if __name__ == "__main__":
     ]
 
     scaler = MinMaxScaler(feature_range=(-1, 1))
-
     df[min_max_scale_cols] = scaler.fit_transform(
         df[min_max_scale_cols].values
     )
@@ -311,15 +322,16 @@ if __name__ == "__main__":
 
     total_mmsis_final = 0
 
-    train_days, val_days, test_days = partition_days( df['day'].unique() )
-    print( train_days, val_days, test_days )
+    train_groups, val_groups, test_groups = partition_groups( 
+        df[['MMSI', 'day']].drop_duplicates().to_numpy().tolist()
+    )
     train_counts, val_counts, test_counts = 0, 0, 0
 
     all_mmsis = []
     all_days = []
 
     val_mmsis = []
-    val_day = []
+    val_days = []
 
     for (mmsi, day), mmsi_df in df.groupby(['MMSI', 'day']):
 
@@ -327,34 +339,25 @@ if __name__ == "__main__":
         na_mask = mmsi_df.isna().any(axis=1)
         mmsi_df = mmsi_df.loc[~na_mask, :].copy()
 
-        day_str = str(day)
-
-        mmsi_timestamps[(mmsi, day_str)] = mmsi_timestamps\
-            [(mmsi, day_str)]\
+        mmsi_timestamps[(mmsi, day)] = mmsi_timestamps\
+            [(mmsi, day)]\
             [~na_mask].copy()
 
         mmsi_df.drop( columns=['MMSI', 'day'], inplace=True )
 
-        mmsi_df = mmsi_df\
-            .rolling(ROLLING_WINDOW_SIZE)\
-            .mean()
-
-        #  Isimt NA vel "for good measure"
-        na_mask = mmsi_df.isna().any(axis=1)
-        mmsi_df = mmsi_df.loc[~na_mask, :].copy()
-
-        mmsi_timestamps[(mmsi, day_str)] = mmsi_timestamps\
-            [(mmsi, day_str)]\
+        mmsi_timestamps[(mmsi, day)] = mmsi_timestamps\
+            [(mmsi, day)]\
             [~na_mask].copy()
 
         X_arr, y_arr = prepare_time_series(mmsi_df)
 
-        if not X_arr.shape[0] >= 50:
+        if not X_arr.shape[0] >= 5:
             continue
 
         total_mmsis_final += 1
 
-        if day in train_days:
+        # split the data
+        if belongs_in( (mmsi, day), train_groups):
 
             train_counts += 1
 
@@ -364,7 +367,7 @@ if __name__ == "__main__":
                 X_train = np.concatenate([X_train, X_arr], axis=0)
                 y_train = np.concatenate([y_train, y_arr], axis=0)
 
-        elif day in val_days:
+        elif belongs_in((mmsi, day), val_groups):
 
             val_counts += 1
 
@@ -375,7 +378,7 @@ if __name__ == "__main__":
                 y_val = np.concatenate([y_val, y_arr], axis=0)
 
             val_mmsis.extend( [mmsi]*X_arr.shape[0] )
-            val_day.extend( [day]*X_arr.shape[0] )
+            val_days.extend( [day]*X_arr.shape[0] )
 
         else:
 
@@ -395,6 +398,9 @@ if __name__ == "__main__":
 
     np.array(all_mmsis).dump('all-mmsis-test.npy')
     np.array(all_days).dump('all-days-test.npy')
+
+    np.array(val_mmsis).dump('val-mmsis-test.npy')
+    np.array(val_days).dump('val-days-test.npy')
 
     np.save('X_train_final.npy', X_train)
     np.save('y_train_final.npy', y_train)
